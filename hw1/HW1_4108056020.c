@@ -5,9 +5,12 @@
 #include <readline/readline.h>
 #include <readline/history.h>
 #include <signal.h>
-void handler(int signum) {
-    write_history(".bash_history"); puts("");
-    if (signum == SIGINT) exit(1);
+void handler(int signum){
+    write_history(".bash_history");
+    if(signum == SIGINT){
+        puts("");
+        exit(1);
+    }
 }
 int main(){
     printf("4108056020 shell ");
@@ -21,12 +24,11 @@ int main(){
     using_history();
     read_history(".bash_history");
     puts("start");
-    for(;;){
+    for(int h;;){
         sprintf(promp, "%s$ ", getcwd(cwd,sizeof(cwd)));
         cmd = readline(promp);
         if(cmd[0]){
             char *expansion;
-            int result = history_expand(cmd, &expansion);
             switch(history_expand(cmd, &expansion)){
                 case -1: case 2:
                     free(expansion);
@@ -53,6 +55,12 @@ int main(){
             register HIST_ENTRY **the_list = history_list();
             for(register int i = 0; the_list[i]; i++)
                 printf("%d %s\n", i + history_base, the_list[i]->line);
+        }else if(sscanf(cmd,"history %d", &h)>0 && h>0){
+            register HIST_ENTRY **the_list = history_list();
+            register int current;
+            for(current = 0; the_list[current++];);
+            for(register int i = --current - h; the_list[i]; i++)
+                printf("%d %s\n", i + history_base, the_list[i]->line);
         }
         // for debug: else perror("Error");
         switch(fork()){
@@ -63,7 +71,7 @@ int main(){
             case 0:{
                 char *argv[100];
                 int argc = 0;
-                for(char *str = strtok(cmd, " "), *arg; str != NULL;) {
+                for(char *str = strtok(cmd, " "), *arg; str != NULL;){
                     arg = malloc(strlen(str) + 1);
                     if(arg != NULL) strcpy(arg, str);
                     argv[argc++] = arg;
