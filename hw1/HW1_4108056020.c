@@ -9,7 +9,7 @@ void handler(int signum){
     write_history(".bash_history");
     if(signum == SIGINT){
         puts("");
-        exit(1);
+        exit(EXIT_FAILURE);
     }
 }
 int main(){
@@ -51,7 +51,7 @@ int main(){
         }else if(sscanf(cmd,"cd %[^\n]\n",buf)>0){
             chdir(buf);
             continue;
-        }else if(strcmp(cmd, "history") == 0){
+        }else if(!strcmp(cmd, "history")){
             register HIST_ENTRY **the_list = history_list();
             for(register int i = 0; the_list[i]; i++)
                 printf("%d %s\n", i + history_base, the_list[i]->line);
