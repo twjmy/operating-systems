@@ -2,12 +2,40 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-main(){
-    printf("4108056020 shell start\n");
-    char cmd[100]={'\0'}, cwd[100]={'\0'}, buf[100]={'\0'};
-    for(;cmd;){
-        printf("%s$",getcwd(cwd,sizeof(cwd)));
-        scanf("%[^\n]",cmd); getchar();
+#include <readline/readline.h>
+#include <readline/history.h>
+#include <signal.h>
+void handler(int signum) {
+    write_history(".bash_history"); puts("");
+    if (signum == SIGINT) exit(1);
+}
+int main(){
+    printf("4108056020 shell ");
+    struct sigaction sa={
+        .sa_handler = handler,
+        .sa_flags = 0
+    };
+    char *cmd, promp[100]={'\0'}, cwd[100]={'\0'}, buf[100]={'\0'};
+    sigemptyset(&sa.sa_mask);
+    sigaction(SIGINT, &sa, NULL);
+    using_history();
+    read_history(".bash_history");
+    puts("start");
+    for(;;){
+        sprintf(promp, "%s$ ", getcwd(cwd,sizeof(cwd)));
+        cmd = readline(promp);
+        if(cmd[0]){
+            char *expansion;
+            int result = history_expand(cmd, &expansion);
+            switch(history_expand(cmd, &expansion)){
+                case -1: case 2:
+                    free(expansion);
+                    continue;
+            }
+            add_history(expansion);
+            strncpy(cmd, expansion, sizeof(cmd) - 1);
+            free(expansion);
+        }
         if(sscanf(cmd,"export %[^=]=%[^\n]\n", cwd, buf)>0){
             setenv(cwd, buf, 1);
             printf("%s=%s\n",cwd,getenv(cwd));
@@ -21,7 +49,12 @@ main(){
         }else if(sscanf(cmd,"cd %[^\n]\n",buf)>0){
             chdir(buf);
             continue;
-        }// for debug: else perror("Error");
+        }else if(strcmp(cmd, "history") == 0){
+            register HIST_ENTRY **the_list = history_list();
+            for(register int i = 0; the_list[i]; i++)
+                printf("%d %s\n", i + history_base, the_list[i]->line);
+        }
+        // for debug: else perror("Error");
         switch(fork()){
             case -1:{
                 perror("Error");
