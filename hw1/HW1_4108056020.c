@@ -55,12 +55,15 @@ int main(){
             register HIST_ENTRY **the_list = history_list();
             for(register int i = 0; the_list[i]; i++)
                 printf("%d %s\n", i + history_base, the_list[i]->line);
+            continue;
         }else if(sscanf(cmd,"history %d", &h)>0 && h>0){
             register HIST_ENTRY **the_list = history_list();
             register int current;
             for(current = 0; the_list[current++];);
-            for(register int i = --current - h; the_list[i]; i++)
+            if(h > current--) continue;
+            for(register int i = current - h; the_list[i]; i++)
                 printf("%d %s\n", i + history_base, the_list[i]->line);
+            continue;
         }
         // for debug: else perror("Error");
         switch(fork()){
