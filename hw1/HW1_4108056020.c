@@ -5,20 +5,56 @@
 #include <readline/readline.h>
 #include <readline/history.h>
 #include <signal.h>
+char *cmd, promp[100]={'\0'}, cwd[100]={'\0'}, buf[100]={'\0'};
+void handler(int);
+struct sigaction sa={
+    .sa_handler = handler,
+    .sa_flags = 0
+}, sa2={
+    .sa_handler = handler,
+    .sa_flags = 0
+};
+int excmd(){
+    switch(fork()){
+        case -1:{
+            perror("Error");
+            return EXIT_FAILURE;
+        }case 0:{
+            sigemptyset(&sa2.sa_mask);
+            sigaction(SIGINT, &sa2, NULL);
+            char *argv[100];
+            int argc = 0;
+            for(char *str = strtok(cmd, " "), *arg; str != NULL;){
+                arg = malloc(strlen(str) + 1);
+                if(arg != NULL) strcpy(arg, str);
+                argv[argc++] = arg;
+                str = strtok(NULL, " ");
+            }
+            argv[argc] = NULL;
+            execvp(argv[0], argv);
+            return EXIT_SUCCESS;
+        }default:
+            wait(NULL);
+            return EXIT_SUCCESS;
+    }
+}
 void handler(int signum){
-    write_history(".bash_history");
-    if(signum == SIGINT){
-        puts("");
-        exit(EXIT_FAILURE);
+    puts("");
+    switch(signum){
+        case SIGINT:{
+            write_history(".bash_history");
+            kill(getpid(), SIGTERM);
+        }case SIGTSTP:{
+            register HIST_ENTRY **the_list = history_list();
+            register int i;
+            for(i = 0; the_list[i++];);
+            cmd = the_list[--i]->line;
+            excmd();
+        }
     }
 }
 int main(){
     printf("4108056020 shell ");
-    struct sigaction sa={
-        .sa_handler = handler,
-        .sa_flags = 0
-    };
-    char *cmd, promp[100]={'\0'}, cwd[100]={'\0'}, buf[100]={'\0'};
     sigemptyset(&sa.sa_mask);
     sigaction(SIGINT, &sa, NULL);
     using_history();
@@ -64,30 +100,10 @@ int main(){
             for(register int i = current - h; the_list[i]; i++)
                 printf("%d %s\n", i + history_base, the_list[i]->line);
             continue;
-        }
+        }else if(!strcmp(cmd, "exit")){
+            write_history(".bash_history");
+            return EXIT_SUCCESS;
+        }else if(excmd() == EXIT_SUCCESS) continue;
         // for debug: else perror("Error");
-        switch(fork()){
-            case -1:{
-                perror("Error");
-                return EXIT_FAILURE;
-            }
-            case 0:{
-                char *argv[100];
-                int argc = 0;
-                for(char *str = strtok(cmd, " "), *arg; str != NULL;){
-                    arg = malloc(strlen(str) + 1);
-                    if(arg != NULL) strcpy(arg, str);
-                    argv[argc++] = arg;
-                    str = strtok(NULL, " ");
-                }
-                argv[argc] = NULL;
-                execvp(argv[0], argv);
-                continue;
-            }
-            default:{
-                wait(NULL);
-                continue;
-            }
-        }
     }
 }
