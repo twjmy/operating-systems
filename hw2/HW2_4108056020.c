@@ -62,6 +62,7 @@ int main(){
     for(int i = -1; ++i < 1024; big_buffer[i] = rand());
     for(int i = -1; ++i < 4; pthread_create(&(producers[i]), NULL, produce, &p[i]));
     for(int i = -1; ++i < 2; pthread_create(&(consumers[i]), NULL, consume, &c[i]));
+    for(int i = -1; ++i < 2; pthread_join(producers[i], NULL));
     for(int i = -1; ++i < 2; pthread_join(consumers[i], NULL));
     printf("Success! maximum = %d and minimum = %d\n", maximum, minimum);
     sem_destroy(&max_buffer_full);
